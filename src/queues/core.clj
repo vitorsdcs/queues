@@ -37,12 +37,16 @@
 (defn output []
   (->> (get-assignments)
     (map #(conj {} {:job_assigned %}))
-    generate-string
-    println))
+    generate-string))
 
-(defn -main [input]
+(defn input [file]
   (remove-agents)
   (remove-jobs)
   (remove-assignments)
-  (process-events (load-events input))
+  (process-events (load-events file))
   (output))
+
+(defn -main
+  ([] (ex/no-input-provided))
+  ([file]
+    (print (input file))))

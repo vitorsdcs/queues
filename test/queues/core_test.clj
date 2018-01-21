@@ -1,7 +1,8 @@
 (ns queues.core-test
   (:require [clojure.test :refer :all]
-            [queues.core :refer :all]))
+            [queues.core :refer :all]
+            [cheshire.core :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(deftest sample-input
+  (let [sample-output (generate-string (parse-string (slurp "sample-output.json")))]
+    (is (= sample-output (input "sample-input.json")))))
