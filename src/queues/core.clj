@@ -1,37 +1,23 @@
 (ns queues.core
-  (:refer-clojure :exclude [sort find])
   (:require [cheshire.core :refer :all])
-  (:require [monger.core :as mg]
-            [monger.collection :as mc]
-            [monger.query :refer :all]
-            [monger.operators :refer :all]))
+  (:require [queues.repository :refer :all]
+            [queues.exceptions :as ex]))
 
-(declare clean-db)
-(declare load-events)
-(declare process-events)
-(declare output)
-(declare get-agent)
-(declare save-agent)
-(declare get-most-urgent-job-by-type)
-(declare get-fittest-job)
-(declare save-job)
-(declare get-assignments)
-(declare save-assignment)
-(declare assign-job)
-(declare to-document)
-(declare to-object)
-(declare to-assignment)
+(defn find-job [agent]
+  (or (get-highest-priority-job-by-type (agent :primary_skillset))
+      (get-highest-priority-job-by-type (agent :secondary_skillset))))
 
-(defn -main []
-  (let [conn (mg/connect {:host "queues-database"}), db (mg/get-db conn "queues")]
-    (clean-db db)
-    (process-events db (load-events))
-    (output db)))
+(defn assign-job [job agent]
+  (save-job (conj job {:agent_id (agent :id)}))
+  (save-assignment job agent))
 
-(defn clean-db [db]
-  (mc/remove db "agents")
-  (mc/remove db "jobs")
-  (mc/remove db "assignments"))
+(defn handle-job-request [job-request]
+  (let [agent (get-agent (job-request :agent_id))]
+    (if (some? agent)
+      (let [job (find-job agent)]
+        (if (some? job)
+          (assign-job job agent)))
+      (ex/no-agent-found (job-request :agent_id)))))
 
 (defn load-events []
   (as-> "sample-input.json" input
@@ -39,68 +25,24 @@
     (parse-stream input true)
     (map first input)))
 
-(defn process-events [db events]
+(defn process-events [events]
   (doseq [event events]
     (let [event-name (first event) object (second event)]
       (cond
-        (= event-name :new_agent) (save-agent db object)
-        (= event-name :new_job) (save-job db object)
-        (= event-name :job_request) (assign-job db object)))))
+        (= event-name :new_agent) (save-agent object)
+        (= event-name :new_job) (save-job object)
+        (= event-name :job_request) (handle-job-request object)
+        :else (ex/unsupported-event event-name)))))
 
-(defn output [db]
-  (->> (get-assignments db)
+(defn output []
+  (->> (get-assignments)
     (map #(conj {} {:job_assigned %}))
-    (generate-string)
-    (println)))
+    generate-string
+    println))
 
-(defn get-agent [db id]
-  (let [agent (mc/find-one-as-map db "agents" {:_id id})]
-    (if (some? agent)
-      (to-object agent))))
-
-(defn save-agent [db agent]
-  (println (str "Adding agent " (agent :id)))
-  (mc/update db "agents" {:_id (agent :id)} {$set (to-document agent)} {:upsert true}))
-
-(defn get-most-urgent-job-by-type [db type]
-  (first (with-collection db "jobs" (find {:agent_id nil :type {$in type}}) (sort (array-map :urgent -1)) (limit 1))))
-
-(defn get-fittest-job [db agent]
-  (let [job (get-most-urgent-job-by-type db (agent :primary_skillset))]
-    (if (some? job)
-      (to-object job)
-      (do
-        (let [job (get-most-urgent-job-by-type db (agent :secondary_skillset))]
-          (if (some? job)
-            (to-object job)))))))
-
-(defn save-job [db job]
-  (println (str "Adding job " (job :id)))
-  (mc/update db "jobs" {:_id (job :id)} {$set (to-document job)} {:upsert true}))
-
-(defn get-assignments [db]
-  (map #(to-assignment %) (mc/find-maps db "assignments")))
-
-(defn save-assignment [db job agent]
-  (println (str "Assigning assignment " (job :id)  " to agent " (agent :id)))
-  (mc/insert db "assignments" {:job_id (job :id) :agent_id (agent :id)}))
-
-(defn assign-job [db job-request]
-  (let [agent (get-agent db (job-request :agent_id))]
-    (if (some? agent)
-      (let [job (get-fittest-job db agent)]
-        (if (some? job)
-          (do
-            (save-job db (conj job {:agent_id (agent :id)}))
-            (save-assignment db job agent))
-          (println (str "No job available for agent " (agent :id)))))
-      (println (str "No agent with id " (job-request :agent_id) " found")))))
-
-(defn to-document [object]
-  (dissoc (conj object {:_id (object :id)}) :id))
-
-(defn to-object [document]
-  (dissoc (conj document {:id (document :_id)}) :_id))
-
-(defn to-assignment [document]
-  (dissoc document :_id))
+(defn -main []
+  (remove-agents)
+  (remove-jobs)
+  (remove-assignments)
+  (process-events (load-events))
+  (output))
