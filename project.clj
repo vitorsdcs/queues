@@ -5,5 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"],
                  [com.novemberain/monger "3.1.0"],
+                 [org.slf4j/slf4j-nop "1.7.12"],
                  [cheshire "5.8.0"]]
   :main queues.core)

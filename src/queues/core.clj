@@ -19,8 +19,8 @@
           (assign-job job agent)))
       (ex/no-agent-found (job-request :agent_id)))))
 
-(defn load-events []
-  (as-> "sample-input.json" input
+(defn load-events [input]
+  (as-> input input
     (clojure.java.io/reader input)
     (parse-stream input true)
     (map first input)))
@@ -40,9 +40,9 @@
     generate-string
     println))
 
-(defn -main []
+(defn -main [input]
   (remove-agents)
   (remove-jobs)
   (remove-assignments)
-  (process-events (load-events))
+  (process-events (load-events input))
   (output))
