@@ -12,6 +12,7 @@
 (declare output)
 (declare get-agent)
 (declare save-agent)
+(declare get-most-urgent-job-by-type)
 (declare get-fittest-job)
 (declare save-job)
 (declare get-assignments)
@@ -61,10 +62,17 @@
   (println (str "Adding agent " (agent :id)))
   (mc/update db "agents" {:_id (agent :id)} {$set (to-document agent)} {:upsert true}))
 
+(defn get-most-urgent-job-by-type [db type]
+  (first (with-collection db "jobs" (find {:agent_id nil :type {$in type}}) (sort (array-map :urgent -1)) (limit 1))))
+
 (defn get-fittest-job [db agent]
-  (let [job (first (with-collection db "jobs" (find {:agent_id nil}) (sort (array-map :urgent -1)) (limit 1)))]
+  (let [job (get-most-urgent-job-by-type db (agent :primary_skillset))]
     (if (some? job)
-      (to-object job))))
+      (to-object job)
+      (do
+        (let [job (get-most-urgent-job-by-type db (agent :secondary_skillset))]
+          (if (some? job)
+            (to-object job)))))))
 
 (defn save-job [db job]
   (println (str "Adding job " (job :id)))
@@ -74,7 +82,7 @@
   (map #(to-assignment %) (mc/find-maps db "assignments")))
 
 (defn save-assignment [db job agent]
-  (println (str "Assigning job " (job :id)  " to agent " (agent :id)))
+  (println (str "Assigning assignment " (job :id)  " to agent " (agent :id)))
   (mc/insert db "assignments" {:job_id (job :id) :agent_id (agent :id)}))
 
 (defn assign-job [db job-request]
