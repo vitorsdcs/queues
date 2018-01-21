@@ -4,8 +4,8 @@
             [queues.exceptions :as ex]))
 
 (defn find-job [agent]
-  (or (get-highest-priority-job-by-type (agent :primary_skillset))
-      (get-highest-priority-job-by-type (agent :secondary_skillset))))
+  (or (get-highest-priority-job-by-skillset (agent :primary_skillset))
+      (get-highest-priority-job-by-skillset (agent :secondary_skillset))))
 
 (defn assign-job [job agent]
   (save-job (conj job {:agent_id (agent :id)}))
@@ -40,9 +40,6 @@
     generate-string))
 
 (defn input [file]
-  (remove-agents)
-  (remove-jobs)
-  (remove-assignments)
   (process-events (load-events file))
   (output))
 
