@@ -13,7 +13,7 @@
   (doseq [event events]
     (let [event-name (key event) object (val event)]
       (cond
-        (= event-name :new_agent) (save-agent! object)
-        (= event-name :new_job) (save-job! object)
+        (= event-name :new_agent) (save-agent object)
+        (= event-name :new_job) (save-job object)
         (= event-name :job_request) (save-job-request object)
         :else (ex/unsupported-event event-name)))))

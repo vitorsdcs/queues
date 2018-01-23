@@ -16,4 +16,5 @@
 (defn -main
   ([] (ex/no-input-provided))
   ([file]
+    (drop-db)
     (print (input file))))
