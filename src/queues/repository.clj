@@ -2,9 +2,9 @@
   (:require [queues.exceptions :as ex]
             [queues.utils :refer :all]))
 
-(defonce agents (atom ()))
-(defonce jobs (atom ()))
-(defonce assignments (atom ()))
+(defonce agents (atom (array-map)))
+(defonce jobs (atom (array-map)))
+(defonce assignments (atom (array-map)))
 (defonce id-assignments (atom 0))
 
 (defn get-agent [id]
