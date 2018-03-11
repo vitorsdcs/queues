@@ -27,7 +27,3 @@ lein test
 * Clojure 1.8.0
 * Java >= 1.7.0
 * Leiningen
-
-## Acknowledgments
-
-* Thank you fellow Nubanker for giving me a good opportunity to improve my Clojure skills :)
